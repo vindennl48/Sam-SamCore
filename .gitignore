@@ -26,6 +26,7 @@
 # Ignore make build dir
 /build
 /forget
+run
 
 # Ignore temp files
 temp.*

@@ -7,6 +7,9 @@
  ******************************************************************************/
 let Helpers = {
   /**
+   * A high powered logging function capable of being shut off and
+   * manipulated very easily within the SAM network.
+   * 
    * @param  {json} args
    *    An object that can send a variety of different settings to
    *    the logger.  This can manipulate how the output looks/feels
@@ -26,13 +29,19 @@ let Helpers = {
    *    Add 2 blank lines above message.
    * @param  {boolean} args.spaceBottom
    *    Add 2 blank lines below message.
+   * @param  {boolean} args.silent
+   *    Keep all messages silent; only need to run once.
    * @param  {any} messages
    *    This can be any format type
    * 
    * TODO: add an automatic logging feature to local file
    */
   log(args={}, ...messages) {
-    if (typeof args !== 'object') { console.log(args); return; }
+    // if there is only one argument sent thru then just print
+    if (typeof args !== 'object') {
+      if (!this.log_silent) { console.log(args); }
+      return;
+    }
 
     if ('leader' in args) {
       if      (args.leader == 'arrow')     { args.leader = '---->'; }
@@ -53,9 +62,15 @@ let Helpers = {
       messages.push('\n\n');
     }
     
-    messages.unshift(args.leader);
-    console.log.apply(console, messages);
-  }
+    if ('leader' in args) { messages.unshift(args.leader); }
+
+    if ('silent' in args && args.silent) { this.log_silent = true; }
+
+    if (!this.log_silent || ('loud' in args && args.loud)) {
+      console.log.apply(console, messages);
+    }
+  },
+  log_silent: false
 }
 
 
@@ -84,13 +99,15 @@ let SamCore = {
   nodeName: 'default',
 
   /**
-   * @param {{nodeSender: string, nodeReceiver: string, apiCall: string, packet: json}} data 
    *    This function will be overloaded by yourself. This is the hook
    *    to be able to receive messages from other nodes.  When a message
    *    is received, you can put what you want accomplished inside this hook.
    * 
    *    Make sure to separate out the incoming messages by nodeSender
    *    and apiCall.
+   *
+   * @param {{nodeSender: string, nodeReceiver: string, apiCall: string, packet: json}} data 
+   *    Data packet being received from SamCore
    */
   onMessage(data){ /** overload this function */ },
 
@@ -153,11 +170,15 @@ let SamCore = {
    *    The data packet in json format to the SamCore API call.
    */
   __internal(apiCall, packet) {
-    ipc.of.samCore.emit('INTERNAL', {
+    this.ipc.of.samCore.emit('INTERNAL', {
       nodeSender: SamCore.nodeName,
       apiCall: apiCall,
       packet: packet
     });
+  },
+
+  disconnect() {
+    this.ipc.disconnect('samCore');
   },
 
   /**
@@ -171,11 +192,12 @@ let SamCore = {
      *    - Do NOT Do: ipc.config.id = this.nodeName;
      *    - Do this:   ipc.config.id = SamCore.nodeName;
      */
-    ipc = new IPCModule;
-    ipc.config.id = SamCore.nodeName;
-    ipc.config.retry = 1500;
+    SamCore.ipc = new IPCModule;
+    SamCore.ipc.config.id = SamCore.nodeName;
+    SamCore.ipc.config.retry = 1500;
+    SamCore.ipc.config.silent = true;
 
-     ipc.connectTo('samCore', function(){
+    SamCore.ipc.connectTo('samCore', function(){
 
       /**
        * Messages from SamCore.  This has all the return messages from
@@ -184,7 +206,7 @@ let SamCore = {
        * All Message calls must receive in the following object:
        * data = { nodeSender: <string>, nodeReceiver: <string>, apiCall: <string>, packet: <json> }
        */
-      ipc.of.samCore.on('message', function(data){
+      SamCore.ipc.of.samCore.on('message', function(data){
         /**
          * This is where all of the internal api hooks will go
          */
@@ -202,20 +224,20 @@ let SamCore = {
       });
 
       // Connect
-      ipc.of.samCore.on('connect', function(){
+      SamCore.ipc.of.samCore.on('connect', function(){
         Helpers.log({leader: 'warning', space: true}, 'Connected to samCore');
 
         /**
          * Need to send a confirmation to SamCore with this node-name.
          * This lets SamCore access sockets by node-name.
          */
-        ipc.of.samCore.emit('nodeInit', {nodeSender: SamCore.nodeName});
+        SamCore.ipc.of.samCore.emit('nodeInit', {nodeSender: SamCore.nodeName});
 
         SamCore.onConnect(); // Run hook
       });
 
       // Disconnect
-      ipc.of.samCore.on('disconnect', function(){
+      SamCore.ipc.of.samCore.on('disconnect', function(){
         Helpers.log({leader: 'warning', space: true}, 'Disconnected from samCore');
 
         SamCore.onDisconnect(); // Run hook
