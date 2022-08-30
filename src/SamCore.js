@@ -230,7 +230,7 @@ let SamCore = {
         /**
          * This is where all of the internal api hooks will go
          */
-        if (data.nodeSender = 'samCore') {
+        if (data.nodeSender == 'samCore') {
           // all of these hooks only receive the packet from the data object
           if      (data.apiCall == 'doesNodeExist') { SamCore.doesNodeExistReturn(data.packet); }
           else if (data.apiCall == 'doesSettingsExist') { SamCore.doesSettingsExistReturn(data.packet); }

@@ -9,7 +9,7 @@ function main() {
   const SamCoreSettings = 'SamCoreSettings.json';
   const filePath = `${runDirectory}/${SamCoreSettings}`
   // Display for debugging
-  Helpers.log({leader: 'highlight', space: true}, 'SamCoreSettings Filepath: ', filePath);
+  Helpers.log({leader: 'highlight'}, 'SamCoreSettings Filepath: ', filePath);
 
   /**
    * SamCore will be doing all of the editing and manipulation
@@ -20,11 +20,12 @@ function main() {
 
   // Set up the IPC coms object
   const {IPCModule} = require('node-ipc');
-  const ipc        = new IPCModule;
-  const nodeName   = 'samCore';
-  ipc.config.id    = nodeName;
-  ipc.config.retry = 1500;
-  let mySockets    = {};
+  const ipc         = new IPCModule;
+  const nodeName    = 'samCore';
+  ipc.config.id     = nodeName;
+  ipc.config.retry  = 1500;
+  ipc.config.silent = true;
+  let mySockets     = {};
 
   // IPC server setup
   ipc.serve(function(){
@@ -37,10 +38,10 @@ function main() {
      */
     ipc.server.on('INTERNAL', function(data, socket){
       // Some logging for debugging
-      Helpers.log({leader: 'arrow', spaceTop: true},  'Internal API Call');
-      Helpers.log({leader: 'sub'},                    'Requested API:    ', data.apiCall);
-      Helpers.log({leader: 'sub'},                    'Requested Packet: ', data.packet);
-      Helpers.log({leader: 'sub', spaceBottom: true}, 'Entire Packet:    ', data);
+      Helpers.log({leader: 'arrow'}, 'Internal API Call');
+      Helpers.log({leader: 'sub'},   'Requested API:    ', data.apiCall);
+      Helpers.log({leader: 'sub'},   'Requested Packet: ', data.packet);
+      Helpers.log({leader: 'sub'},   'Entire Packet:    ', data);
 
 
       /**
@@ -91,12 +92,12 @@ function main() {
      */
     ipc.server.on('EXTERNAL', function(data, socket){
       // Some logging for debugging
-      Helpers.log({leader: 'arrow', spaceTop: true},  'External API Call');
-      Helpers.log({leader: 'sub'},                    'Node Sender:      ', data.nodeSender);
-      Helpers.log({leader: 'sub'},                    'Node Receiver:    ', data.nodeReceiver);
-      Helpers.log({leader: 'sub'},                    'Requested API:    ', data.apiCall);
-      Helpers.log({leader: 'sub'},                    'Requested Packet: ', data.packet);
-      Helpers.log({leader: 'sub', spaceBottom: true}, 'Entire Packet:    ', data);
+      Helpers.log({leader: 'arrow'}, 'External API Call');
+      Helpers.log({leader: 'sub'},   'Node Sender:      ', data.nodeSender);
+      Helpers.log({leader: 'sub'},   'Node Receiver:    ', data.nodeReceiver);
+      Helpers.log({leader: 'sub'},   'Requested API:    ', data.apiCall);
+      Helpers.log({leader: 'sub'},   'Requested Packet: ', data.packet);
+      Helpers.log({leader: 'sub'},   'Entire Packet:    ', data);
 
       /**
        * On all external commands, SamCore is only responsible for relaying the
@@ -124,15 +125,15 @@ function main() {
      */
     ipc.server.on('message', function(data, socket){
       // Some logging for debugging
-      Helpers.log({leader: 'arrow', space: true}, 'Message: ', data);
+      Helpers.log({leader: 'arrow'}, 'Message: ', data);
 
-      ipc.server.emit(mySockets[data.nodeReceiver], data);
+      ipc.server.emit(mySockets[data.nodeReceiver], 'message', data);
     });
 
     // Grab a list of all sockets connected
     ipc.server.on('nodeInit', function(data, socket){
       // Some logging for debugging
-      Helpers.log({leader: 'arrow', space: true}, 'nodeInit: ', data);
+      Helpers.log({leader: 'arrow'}, 'nodeInit: ', data);
 
       mySockets[data.nodeSender] = socket;
     });
@@ -140,7 +141,7 @@ function main() {
     // on Node Disconnect
     ipc.server.on('socket.disconnected',
       function(socket, destroyedSocketID) {
-        Helpers.log({leader: 'arrow', space: true}, 'client ', destroyedSocketID, ' has disconnected!');
+        Helpers.log({leader: 'arrow'}, 'client ', destroyedSocketID, ' has disconnected!');
       }
     );
   });
