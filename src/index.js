@@ -1,5 +1,39 @@
 const { Helpers } = require('./SamCore.js');
 
+/**
+ * TODO: if settings json doesnt exist, create the file
+ *  - Will need to create a default SamCore package
+ * 
+ * TODO: Add internal API to install a package
+ *  - Need a default object to add in for each new package
+ *  - can set a cli argument for each setting
+ *  - After info is put into settings json, install package
+ *    - If development flag is set, do not try to install
+ * 
+ * TODO: Add internal API to modify settings json file
+ *  - So other nodes can access and modify their own settings
+ *  - So our package manager can add/remove/modify
+ *    packages
+ *  - Will need to make the API exclusive to node settings
+ *    to prevent accidental changes to other settings.
+ * 
+ * TODO: Add internal API to start up all the other nodes
+ *  - Which ever nodes are marked as 'persistent' we want
+ *    to launch these nodes at this time.
+ *  - There will also be a SamCore setting that can auto
+ *    launch the persistent nodes on startup.
+ *  - ALL other nodes, when started up, can NOT send out any
+ *    messages UNTIL it receives an OK message from SamCore.
+ *    This eliminates issues where a node's dependency nodes
+ *    have not spun up yet and is attempting to make a call.
+ * 
+ * TODO: Add 'wellness check' ipc message handling
+ *  - To make sure other nodes are still up and running
+ *    - If a node has disconnected, we need to make sure
+ *      to remove it's socket from the mySockets list.
+ *      This is how we can tell if a node is active or not.
+ *  - To let SamStart know if SamCore is up or down
+ */
 function main() {
 
   // Pull in the SamCore config file

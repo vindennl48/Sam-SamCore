@@ -93,6 +93,17 @@ const { IPCModule } = require('node-ipc');
  *  - Hooks built into the IPC protocol.  This takes a lot of the hard work out
  *    of communication with SamCore and the other nodes in the network.
  *    Remember, all node communication goes through SamCore.
+ * 
+ * TODO: Add wellness check handling
+ *  - This allows SamCore to make sure each node is connected/disconnected
+ * 
+ * TODO: Add internal API commands to work with SamCore settings json
+ *  - All of the settings for each individual node will live inside the
+ *    SamCore settings json file.  This allows persistent settings even
+ *    if a node is uninstalled.
+ *  - These commands will need to get the node settings as well as save
+ *    the node settings.
+ * 
  ******************************************************************************/
 let SamCore = {
   ipc: null,
