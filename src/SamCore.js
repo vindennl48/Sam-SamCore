@@ -244,7 +244,7 @@ let SamCore = {
       });
 
       // Errors coming back from SamCore
-      SamCore.ipc.of.samCore.on('error', function(data){
+      SamCore.ipc.of.samCore.on('errorMessage', function(data){
         SamCore.onError(data.packet); // Run hook
       });
 

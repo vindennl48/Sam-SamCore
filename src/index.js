@@ -54,7 +54,7 @@ function main() {
        */
       if (data.apiCall == 'doesNodeExist') {
         data.packet.response = false;
-        if (file.get('nodes').includes(data.packet.nodeName)) { data.packet.response = true; }
+        if (file.get('packages').includes(data.packet.nodeName)) { data.packet.response = true; }
 
         ipc.server.emit(socket, 'message', {
           nodeSender: nodeName, // node that message is coming from
