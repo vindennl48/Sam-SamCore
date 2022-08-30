@@ -121,6 +121,11 @@ let SamCore = {
    */
   onDisconnect(){ /** overload this function */ },
 
+  /**
+   * Hook for handling errors from SamCore
+   */
+  onError(data){ /** overload this function */ },
+
 
 
 /** INTERNAL API */
@@ -177,8 +182,23 @@ let SamCore = {
     });
   },
 
+  /**
+   * Disconnect node from the IPC network.  This does
+   * not affect SamCore.
+   */
   disconnect() {
     this.ipc.disconnect('samCore');
+  },
+
+  /**
+   * Send a message to another node.  This can be used when
+   * answering an API call from an external node.
+   * 
+   * @param {{nodeSender: string, nodeReceiver: string, apiCall: string, packet: json}} data 
+   *    This data object must contain at least the above values
+   */
+  sendMessage(data) {
+    this.ipc.of.samCore.emit('EXTERNAL', data);
   },
 
   /**
@@ -211,16 +231,21 @@ let SamCore = {
          * This is where all of the internal api hooks will go
          */
         if (data.nodeSender = 'samCore') {
+          // all of these hooks only receive the packet from the data object
           if      (data.apiCall == 'doesNodeExist') { SamCore.doesNodeExistReturn(data.packet); }
           else if (data.apiCall == 'doesSettingsExist') { SamCore.doesSettingsExistReturn(data.packet); }
-          // return;
+        } else {
+          /**
+           * This hook is used for external nodes.  All SamCore internal API
+           * commands are listed as functions above.
+           */
+          SamCore.onMessage(data); // Run hook
         }
+      });
 
-        /**
-         * This hook is used for external nodes.  All SamCore internal API
-         * commands are listed as functions above.
-         */
-        SamCore.onMessage(data); // Run hook
+      // Errors coming back from SamCore
+      SamCore.ipc.of.samCore.on('error', function(data){
+        SamCore.onError(data.packet); // Run hook
       });
 
       // Connect

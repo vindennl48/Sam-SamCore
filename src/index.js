@@ -21,8 +21,8 @@ function main() {
   // Set up the IPC coms object
   const {IPCModule} = require('node-ipc');
   const ipc        = new IPCModule;
-  const thisNode   = 'samCore';
-  ipc.config.id    = thisNode;
+  const nodeName   = 'samCore';
+  ipc.config.id    = nodeName;
   ipc.config.retry = 1500;
   let mySockets    = {};
 
@@ -56,8 +56,8 @@ function main() {
         if (file.get('nodes').includes(data.packet.nodeName)) { data.packet.response = true; }
 
         ipc.server.emit(socket, 'message', {
-          nodeSender: thisNode, // node that message is coming from
-          // nodeReceiver: thisNode, // node that message is coming from, SamCore doesnt send this value
+          nodeSender: nodeName, // node that message is coming from
+          // nodeReceiver: nodeName, // node that message is coming from, SamCore doesnt send this value
           apiCall: 'doesNodeExist', // response coming from what api call?
           packet: data.packet // packet is the data coming back. can be any data type including json
         });
@@ -74,8 +74,8 @@ function main() {
         data.packet.response = true;
 
         ipc.server.emit(socket, 'message', {
-          nodeSender: thisNode, // node that message is coming from
-          // nodeReceiver: thisNode, // node that message is coming from, SamCore doesnt send this value
+          nodeSender: nodeName, // node that message is coming from
+          // nodeReceiver: nodeName, // node that message is coming from, SamCore doesnt send this value
           apiCall: 'doesSettingsExist', // response coming from what api call?
           packet: data.packet // packet is the data coming back. can be any data type including json
         });
@@ -97,6 +97,23 @@ function main() {
       Helpers.log({leader: 'sub'},                    'Requested API:    ', data.apiCall);
       Helpers.log({leader: 'sub'},                    'Requested Packet: ', data.packet);
       Helpers.log({leader: 'sub', spaceBottom: true}, 'Entire Packet:    ', data);
+
+      /**
+       * On all external commands, SamCore is only responsible for relaying the
+       * data object from one node to another.
+       */
+      if (data.nodeReceiver in mySockets) {
+        ipc.server.emit(mySockets[data.nodeReceiver], 'message', data);
+      } else {
+        const error_text = `Node "${data.nodeReceiver}" does not exist!`;
+        Helpers.log({leader: 'error', loud: true}, error_text);
+        ipc.server.emit(socket, 'error', {
+          nodeSender: nodeName,
+          nodeReceiver: data.nodeSender,
+          apiCall: data.apiCall,
+          packet: {response: error_text}
+        });
+      }
     });
 
     /**
