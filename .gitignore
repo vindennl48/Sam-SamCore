@@ -23,6 +23,9 @@
 /public/assets
 .byebug_history
 
+# Ignore DS Store files
+**/.DS_Store
+
 # Ignore make build dir
 /build
 /forget
@@ -32,4 +35,4 @@ run
 temp.*
 
 # Ignore Sam Settings File
-SamCoreSettings.json
+**/SamCoreSettings.json
