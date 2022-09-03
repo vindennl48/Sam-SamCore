@@ -1,4 +1,5 @@
-const {IPCModule} = require('node-ipc');
+const { IPCModule } = require('node-ipc');
+const { Helpers }   = require('./Helpers.js');
 
 class Client {
   /**
@@ -128,6 +129,14 @@ class Client {
        */
       this.ipc.of[this.serverName].on('disconnect', function() {
         this.ipc.disconnect(this.serverName);
+      }.bind(this));
+
+      /**
+       * Built-in for sending messages to other nodes.  Easy way
+       * to be able to debug connection issues.
+       */
+      this.ipc.of[this.serverName].on('message', function(packet) {
+        Helpers.log({leader: 'arrow', loud: true}, `Message from "${packet.sender}":`, packet.data);
       }.bind(this));
 
       /**

@@ -1,4 +1,5 @@
-const {IPCModule} = require('node-ipc');
+const { IPCModule } = require('node-ipc');
+const { Helpers }   = require('./Helpers.js');
 
 class Server {
 
@@ -91,6 +92,14 @@ class Server {
        */
       this.ipc.server.on('return', function(packet, socket) {
         if ('sender' in packet) { this.return(packet); }
+      }.bind(this));
+
+      /**
+       * Built-in for sending messages to other nodes.  Easy way
+       * to be able to debug connection issues.
+       */
+      this.ipc.server.on('message', function(packet, socket) {
+        Helpers.log({leader: 'arrow', loud: true}, `Message from "${packet.sender}":`, packet.data);
       }.bind(this));
 
       /**
