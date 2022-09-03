@@ -29,6 +29,15 @@ function main() {
   const { Server } = require('./Server.js');
   let SamCore = new Server(serverName);
   SamCore
+    .addApiCall('doesNodeExist', function(packet, socket) {
+      packet.dataSent = packet.data;
+      packet.data     = false;
+
+      if (packet.dataSent in this.sockets) {
+        packet.data = true;
+      }
+      this.return(packet);
+    })
     .addApiCall('helloWorld', function(packet, socket) {
       packet.data = 'helloWorld! ' + packet.data;
       this.return(packet);
