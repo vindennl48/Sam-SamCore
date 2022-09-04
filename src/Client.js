@@ -29,6 +29,7 @@ class Client {
 
   /**
    * Return data back from an API Call 
+   * 
    * @param {json} packet 
    *  packet received for API call
    */
@@ -37,6 +38,7 @@ class Client {
   }
 
   /**
+   * Used to call an API from another node
    * 
    * @param {string} receiver 
    *  Name of node to call
@@ -46,7 +48,7 @@ class Client {
    *  Any data required to send for the API call. If no data
    *  is required, send an empty object = {}
    */
-  call(receiver, apiCall, data) {
+  call(receiver, apiCall, data={}) {
     let packet = {
       sender: this.nodeName,
       receiver: receiver,
@@ -88,6 +90,7 @@ class Client {
   }
 
   /**
+   * Used for adding an API call to this node
    * 
    * @param {string} call 
    *  Name of API call
@@ -103,9 +106,11 @@ class Client {
   }
 
   /**
+   * Used to start up the IPC connection.  This function MUST
+   * be called. 
    * 
    * @param {function} onConnect 
-   *  Main function call for this Node.  Called after
+   *  Optional main function call for this Node.  Called after
    *  connection to server is established.
    */
   run(onConnect=null) {
@@ -173,7 +178,6 @@ function main() {
       this.call('TestServer', 'butter', 'Butter the bread...');
     });
 }
-
-// main();
+// main();  // uncomment to use example code
 
 module.exports = { Client };

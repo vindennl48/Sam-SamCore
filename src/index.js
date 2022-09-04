@@ -32,6 +32,15 @@ SamCore
     packet.dataSent = packet.data;
     packet.data     = false;
 
+    /**
+     * 'this.sockets' refers to an array in the Server class.
+     * This array holds all of the active sockets that are
+     * being used at any given moment.  As nodes connect to
+     * this server, the socket between this server and the
+     * node is stored in this array.  When the node terminates
+     * or the connection is severed, the Server removes the
+     * socket from this list.
+     */
     if (packet.dataSent in this.sockets) {
       packet.data = true;
     }

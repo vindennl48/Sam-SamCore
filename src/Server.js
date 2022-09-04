@@ -143,7 +143,6 @@ function main() {
     })
     .run();
 }
-
-// main();
+// main();  // uncomment to use example code
 
 module.exports = { Server };
