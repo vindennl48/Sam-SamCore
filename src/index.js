@@ -1,6 +1,6 @@
 const { Helpers } = require('./Helpers.js');
 
-let serverName = 'SamCore';
+let serverName = 'samcore';
 
   /**
  * SamCore will be doing all of the editing and manipulation
