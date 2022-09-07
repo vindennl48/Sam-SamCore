@@ -102,6 +102,8 @@ At the momment, there are only two functions in this library.
 
 ## Client.js
 
+***NOTE: There have been updates to include `addHook` and `addReturnCall`.  These are marked in the comments of `Client.js` and `Server.js` in the `src` directory.***
+
 This is probably the most important library of all 3.  This will be the library incorporated into all JS nodes (if desired).
 
 Let's take a look at the intended use of this library before digging into the internals.
