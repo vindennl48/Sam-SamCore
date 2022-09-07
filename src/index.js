@@ -2,25 +2,25 @@ const { Helpers } = require('./Helpers.js');
 
 let serverName = 'samcore';
 
-  /**
+/**
  * SamCore will be doing all of the editing and manipulation
  * of the json settings file.  So we can have it set up to
  * autosave.  No need to refresh the file.
- * 
+ *
  * Also, if the file doesnt exist, lets create one
  */
-const editJsonFile = require('edit-json-file');
-const runDirectory = process.cwd();
+const editJsonFile    = require('edit-json-file');
+const runDirectory    = process.cwd();
 const SamCoreSettings = 'SamCoreSettings.json';
-const filePath = `${runDirectory}/${SamCoreSettings}`
-let file = editJsonFile(filePath, {autosave: true});
+const filePath        = `${runDirectory}/${SamCoreSettings}`
+let file              = editJsonFile(filePath, {autosave: true});
 if (!Object.keys(file.get()).length) {
   file.set(`packages.${serverName}`, Helpers.defaultPackage({
-    version: '1.0.0', // try and pull this from package file
-    installed: true,
+    version:    '1.0.0', // try and pull this from package file
+    installed:  true,
     persistent: true,
-    mandatory: true,
-    link: "https://github.com/vindennl48/Sam-SamCore"
+    mandatory:  true,
+    link:       "https: //github.com/vindennl48/Sam-SamCore"
   }));
 } 
 

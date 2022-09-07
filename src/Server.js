@@ -36,7 +36,10 @@ class Server {
    *  packet received from node
    */
   return(packet) {
-    this.ipc.server.emit(this.sockets[packet.sender], 'return', packet);
+    this.ipc.server.broadcast(
+      `${packet.sender}.${packet.receiver}.${packet.apiCall}`,
+      packet
+    );
   }
 
   /**
@@ -47,7 +50,10 @@ class Server {
    *  packet received from node
    */
   send(packet) {
-    this.ipc.server.emit(this.sockets[packet.receiver], packet.apiCall, packet);
+    this.ipc.server.broadcast(
+      `${packet.receiver}.${packet.apiCall}`,
+      packet
+    );
   }
 
   /**
@@ -60,7 +66,7 @@ class Server {
    * @returns this
    */
   addApiCall(call, callBack) {
-    this.calls.push(call);
+    this.calls.push(`${this.serverName}.${call}`);
     this.callBacks.push(callBack.bind(this));
     return this;
   }
@@ -70,11 +76,17 @@ class Server {
    */
   run() {
     this.ipc.serve(function() {
+      this.ipc.server.on('*', function(message, packet, socket) {
+        if (message == 'connect') { return; }
+        // Helpers.log({leader: 'highlight'}, `Message: ${message}, Packet: `, packet, `, Socket: ${socket.connecting}`);
+        this.send(packet);
+      }.bind(this));
+
       /**
        * This allows the server to collect sockets of the
        * connected nodes in the network.
        */
-      this.ipc.server.on('nodeInit', function(nodeName, socket) {
+      this.ipc.server.on(`${this.serverName}.nodeInit`, function(nodeName, socket) {
         this.sockets[nodeName] = socket;
       }.bind(this));
 
@@ -82,7 +94,7 @@ class Server {
        * A send function for when Node A calls an api from
        * Node B.
        */
-      this.ipc.server.on('send', function(packet, socket) {
+      this.ipc.server.on(`${this.serverName}.send`, function(packet, socket) {
         if ('receiver' in packet) { this.send(packet); }
       }.bind(this));
 
@@ -90,7 +102,7 @@ class Server {
        * A return function for when Node A calls an api from
        * Node B and Node B sends a response.
        */
-      this.ipc.server.on('return', function(packet, socket) {
+      this.ipc.server.on(`${this.serverName}.return`, function(packet, socket) {
         if ('sender' in packet) { this.return(packet); }
       }.bind(this));
 
@@ -98,8 +110,12 @@ class Server {
        * Built-in for sending messages to other nodes.  Easy way
        * to be able to debug connection issues.
        */
-      this.ipc.server.on('message', function(packet, socket) {
-        Helpers.log({leader: 'arrow', loud: true}, `Message from "${packet.sender}":`, packet.data);
+      this.ipc.server.on(`${this.serverName}.message`, function(packet, socket) {
+        Helpers.log(
+          {leader: 'arrow', loud: true},
+          `Message from "${packet.sender}":`,
+          packet.data
+        );
       }.bind(this));
 
       /**
@@ -134,7 +150,7 @@ class Server {
  * Example Code
  */
 function main() {
-  let myServer = new Server('TestServer');
+  let myServer = new Server('testserver');
 
   myServer
     .addApiCall('butter', function(packet, socket) {
