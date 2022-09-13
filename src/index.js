@@ -13,9 +13,9 @@ const editJsonFile    = require('edit-json-file');
 const runDirectory    = process.cwd();
 const SamCoreSettings = 'SamCoreSettings.json';
 const filePath        = `${runDirectory}/${SamCoreSettings}`
-let file              = editJsonFile(filePath, {autosave: true});
-if (!Object.keys(file.get()).length) {
-  file.set(`packages.${serverName}`, Helpers.defaultPackage({
+let   db              = editJsonFile(filePath, {autosave: true});
+if (!Object.keys(db.get()).length) {
+  db.set(`packages.${serverName}`, Helpers.defaultPackage({
     version:    '1.0.0', // try and pull this from package file
     installed:  true,
     persistent: true,
@@ -28,6 +28,10 @@ if (!Object.keys(file.get()).length) {
 const { Server } = require('./Server.js');
 let SamCore = new Server(serverName);
 SamCore
+  .addApiCall('helloWorld', function(packet, socket) {
+    packet.data = 'helloWorld! ' + packet.data;
+    this.return(packet);
+  })
   .addApiCall('doesNodeExist', function(packet, socket) {
     packet.dataSent = packet.data;
     packet.data     = false;
@@ -46,8 +50,25 @@ SamCore
     }
     this.return(packet);
   })
-  .addApiCall('helloWorld', function(packet, socket) {
-    packet.data = 'helloWorld! ' + packet.data;
+  .addApiCall('getUsername', function(packet) {
+    let keys = Object.keys(db.get());
+
+    if ('username' in keys) {
+      packet.data = db.get('username');
+    } else {
+      packet.data = 0;
+    }
+
     this.return(packet);
   })
+  .addApiCall('setUsername', function(packet) {
+    if (!'data' in packet) {
+      packet.data = false;
+    } else {
+      db.set('username', packet.data);
+      packet.data = true;
+    }
+    this.return(packet);
+  })
+
   .run();
