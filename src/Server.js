@@ -79,7 +79,11 @@ class Server {
       this.ipc.server.on('*', function(message, packet, socket) {
         if (message == 'connect') { return; }
         // Helpers.log({leader: 'highlight'}, `Message: ${message}, Packet: `, packet, `, Socket: ${socket.connecting}`);
-        this.send(packet);
+        if (message.endsWith('return')) {
+          this.return(packet);
+        } else {
+          this.send(packet);
+        }
       }.bind(this));
 
       /**
@@ -94,17 +98,19 @@ class Server {
        * A send function for when Node A calls an api from
        * Node B.
        */
-      this.ipc.server.on(`${this.serverName}.send`, function(packet, socket) {
-        if ('receiver' in packet) { this.send(packet); }
-      }.bind(this));
-
-      /**
-       * A return function for when Node A calls an api from
-       * Node B and Node B sends a response.
-       */
-      this.ipc.server.on(`${this.serverName}.return`, function(packet, socket) {
-        if ('sender' in packet) { this.return(packet); }
-      }.bind(this));
+// Have to get rid of these because of the hook broadcast.
+// This was double sending calls
+//      this.ipc.server.on(`${this.serverName}.send`, function(packet, socket) {
+//        if ('receiver' in packet) { this.send(packet); }
+//      }.bind(this));
+//
+//      /**
+//       * A return function for when Node A calls an api from
+//       * Node B and Node B sends a response.
+//       */
+//      this.ipc.server.on(`${this.serverName}.return`, function(packet, socket) {
+//        if ('sender' in packet) { this.return(packet); }
+//      }.bind(this));
 
       /**
        * Built-in for sending messages to other nodes.  Easy way
