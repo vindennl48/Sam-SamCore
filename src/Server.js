@@ -36,10 +36,24 @@ class Server {
    *  packet received from node
    */
   return(packet) {
-    this.ipc.server.broadcast(
-      `${packet.sender}.${packet.receiver}.${packet.apiCall}`,
-      packet
-    );
+    let returnCall = `${packet.sender}.${packet.receiver}.${packet.apiCall}`;
+    if (packet.returnCode != null) {
+      returnCall = returnCall + `.${packet.returnCode}`;
+    }
+
+    if (packet.apiCall == 'onError') {
+      returnCall = 'onError';
+    }
+
+    this.ipc.server.broadcast(returnCall, packet);
+  }
+
+  returnError(packet, errorMessage=null) {
+    if (errorMessage != null) {
+      packet.errorMessage = errorMessage;
+    }
+
+    this.ipc.server.broadcast(`${packet.sender}.onError`, packet);
   }
 
   /**
@@ -81,7 +95,11 @@ class Server {
         // Helpers.log({leader: 'highlight'}, `Message: ${message}, Packet: `, packet, `, Socket: ${socket.connecting}`);
         if (message.endsWith('return')) {
           this.return(packet);
-        } else {
+        }
+        else if (message.endsWith('returnError')) {
+          this.returnError(packet);
+        }
+        else {
           this.send(packet);
         }
       }.bind(this));
@@ -90,8 +108,8 @@ class Server {
        * This allows the server to collect sockets of the
        * connected nodes in the network.
        */
-      this.ipc.server.on(`${this.serverName}.nodeInit`, function(nodeName, socket) {
-        this.sockets[nodeName] = socket;
+      this.ipc.server.on(`${this.serverName}.nodeInit`, function(packet, socket) {
+        this.sockets[packet.data] = socket;
       }.bind(this));
 
       /**

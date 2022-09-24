@@ -67,8 +67,24 @@ let Helpers = {
   log_silent: false,
 
   /**
+  * functions used in models / dbjson items
+  */
+  model: {
+    /**
+    * @param {array} arr - Array of attributes for a model object
+    * @param {string} attr - Attribute that we want to filter from a model
+    *   object
+    */
+    getAttr(arr, attr) {
+    return arr.filter(a => {
+      return a.attr === attr;
+    });
+    }
+  },
+
+  /**
    * 
-   * @param {json} args 
+   * @param {json} args
    *  - version: version number as string '1.0.0'
    *  - development: is actively being developed
    *  - installed: is downloaded

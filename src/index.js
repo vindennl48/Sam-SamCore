@@ -14,7 +14,7 @@ const runDirectory    = process.cwd();
 const SamCoreSettings = 'SamCoreSettings.json';
 const filePath        = `${runDirectory}/${SamCoreSettings}`
 let   db              = editJsonFile(filePath, {autosave: true});
-if (!Object.keys(db.get()).length) {
+if ( !Object.keys(db.get()).length ) {
   db.set(`packages.${serverName}`, Helpers.defaultPackage({
     version:    '1.0.0', // try and pull this from package file
     installed:  true,
@@ -28,13 +28,13 @@ if (!Object.keys(db.get()).length) {
 const { Server } = require('./Server.js');
 let SamCore = new Server(serverName);
 SamCore
-  .addApiCall('helloWorld', function(packet, socket) {
+  .addApiCall('helloWorld', function(packet) {
     packet.data = 'helloWorld! ' + packet.data;
     this.return(packet);
   })
-  .addApiCall('doesNodeExist', function(packet, socket) {
-    packet.dataSent = packet.data;
-    packet.data     = false;
+  .addApiCall('doesNodeExist', function(packet) {
+    packet.bdata = packet.data;
+    packet.data  = false;
 
     /**
      * 'this.sockets' refers to an array in the Server class.
@@ -45,15 +45,13 @@ SamCore
      * or the connection is severed, the Server removes the
      * socket from this list.
      */
-    if (packet.dataSent in this.sockets) {
+    if (packet.bdata in this.sockets) {
       packet.data = true;
     }
     this.return(packet);
   })
   .addApiCall('getUsername', function(packet) {
-    let keys = Object.keys(db.get());
-
-    if ('username' in keys) {
+    if ('username' in db.get()) {
       packet.data = db.get('username');
     } else {
       packet.data = 0;
@@ -62,10 +60,29 @@ SamCore
     this.return(packet);
   })
   .addApiCall('setUsername', function(packet) {
-    if (!'data' in packet) {
+    if ( !('data' in packet) ) {
       packet.data = false;
     } else {
       db.set('username', packet.data);
+      packet.data = true;
+    }
+    this.return(packet);
+  })
+  .addApiCall('getDawHomeDir', function(packet) {
+    packet.bdata = packet.data; // backup of sent data
+    if ( !('data' in packet) ) {
+      packet.data = -1;
+    } else {
+      packet.data = db.get(`daw.${packet.data.daw}.homeDir`);
+    }
+    this.return(packet);
+  })
+  .addApiCall('setDawHomeDir', function(packet) {
+    packet.bdata = packet.data; // backup of sent data
+    if ( !('data' in packet) ){
+      packet.data = false;
+    } else {
+      db.set(`daw.${packet.data.daw}.homeDir`, packet.data.homeDir);
       packet.data = true;
     }
     this.return(packet);
