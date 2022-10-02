@@ -37,6 +37,8 @@ class Client {
     *   Can be any data type. This is the data required by the api call
     */
   async callApi(receiver, apiCall, data={}) {
+    if (typeof data !== 'object') { data = {}; }
+
     let promise = await new Promise(function(resolve, reject) {
       /**
         * The returnCode is to force a unique callback for each api call.  This
@@ -54,11 +56,12 @@ class Client {
 
       // Generates the packet needed to send thru the server
       let packet = {
-        sender:     this.nodeName,
-        receiver:   receiver,
-        apiCall:    apiCall,
-        returnCode: returnCode,
-        data:       data
+        sender:       this.nodeName,
+        receiver:     receiver,
+        apiCall:      apiCall,
+        returnCode:   returnCode,
+        bdata:        data, // used as backup for debugging
+        data:         data
       };
 
       // Sends out the api call
@@ -70,6 +73,7 @@ class Client {
 
     }.bind(this));
 
+    // This returns a packet
     return promise;
   }
 
@@ -115,11 +119,15 @@ class Client {
     *  packet received for API call
     */
   return(packet) {
+    if ( !('status' in packet.data) ) {
+      packet.data.status = true;
+    }
     this.ipc.of[this.serverName].emit(`${this.serverName}.return`, packet);
   }
 
   /**
-    * Return an error from API call
+    * Return an error from API call.  If errorMessage is already in packet, this
+    * will not change the existing errorMessage.
     *
     * @param {json} packet
     *   packet returning from API Call
@@ -127,8 +135,15 @@ class Client {
     *   Message being sent back to caller of api call
     */
   returnError(packet, errorMessage='Default Error Message') {
-    packet.errorMessage = errorMessage;
-    this.ipc.of[this.serverName].emit(`${this.serverName}.returnError`, packet);
+    if ( !('status' in packet.data) ) {
+      packet.data.status = false;
+    }
+
+    if ( !('errorMessage' in packet.data) ) {
+      packet.data.errorMessage = errorMessage;
+    }
+
+    this.return(packet);
   }
 
   /**
@@ -140,7 +155,9 @@ class Client {
     *  connection to server is established.
     */
   // run(onConnect=null) {
-  async run(onConnect=null) {
+  async run(args) {
+    // args is being checked before being used below.
+
     /**
       * Make sure we establish connection first
       */
@@ -167,6 +184,8 @@ class Client {
       */
     await this._networkOperational();
 
+    if ('onInit' in args) { await (args.onInit.bind(this))(); }
+
     /**
       * Now we can load all of this node's API calls
       */
@@ -178,7 +197,7 @@ class Client {
       * Here is the main loop function for this node.  It uses the
       * onConnect callback if it exists.
       */
-    if (onConnect != null) { (onConnect.bind(this))(); }
+    if ('onConnect' in args) { (args.onConnect.bind(this))(); }
   }
 
   async _connect() {
@@ -195,7 +214,7 @@ class Client {
             * send it's node name to the server so the server can collect
             * the socket connection for future use.
             */
-          await this.callApi(this.serverName, 'nodeInit', this.nodeName);
+          await this.callApi(this.serverName, 'nodeInit', { name: this.nodeName });
           resolve();
         }.bind(this));
       }.bind(this));
@@ -208,8 +227,8 @@ class Client {
     let answer = false;
 
     while (!answer) {
-      let result = await this.callApi(this.serverName, 'greenLight');
-      if (result.data === true) {
+      let packet = await this.callApi(this.serverName, 'greenLight');
+      if (packet.data.result === true) {
         answer = true;
         // Helpers.log({leader: 'highlight', loud: false}, 'GO!');
       } else {
@@ -242,13 +261,13 @@ function main() {
       this.return(packet);
     })
 
-    .run(async function() {
+    .run({onConnect: async function() {
       let packet = await this.callApi(nodeName, 'helloMe', 'All of this with');
 
       Helpers.log({leader: 'arrow', loud: true}, 'packet: ', packet.data);
-    });
+    }});
 }
 
-main(); // uncomment to use example code
+// main(); // uncomment to use example code
 
 module.exports = { Client };

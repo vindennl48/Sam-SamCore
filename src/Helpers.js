@@ -83,6 +83,12 @@ let Helpers = {
   },
 
   /**
+  * Return if there is an error
+  */
+  // packetArgsCheck(args={}) {
+  // }
+
+  /**
    * 
    * @param {json} args
    *  - version: version number as string '1.0.0'

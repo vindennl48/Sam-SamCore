@@ -37,21 +37,32 @@ class Server {
     *  packet received from node
     */
   return(packet) {
+    if ( !('status' in packet.data) ) {
+      packet.data.status = true;
+    }
+
     // receiver.apiCall.return.sender.returnCode
     let returnCall = `${packet.receiver}.${packet.apiCall}.return.${packet.sender}`;
-    if (packet.returnCode != null) {
+    if (packet.returnCode !== null) {
       returnCall += `.${packet.returnCode}`;
     }
 
     this.ipc.server.broadcast(returnCall, packet);
   }
 
-  returnError(packet) {
-    if ( !('errorMessage' in packet) ) {
-      packet.errorMessage = 'Default error message';
+  /**
+    * This function is obsolete.
+    */
+  returnError(packet, errorMessage='Default Error Message') {
+    if ( !('status' in packet.data) ) {
+      packet.data.status = false;
     }
 
-    this.ipc.server.broadcast(`${packet.sender}.onError`, packet);
+    if ( !('errorMessage' in packet.data) ) {
+      packet.data.errorMessage = errorMessage;
+    }
+
+    this.return(packet);
   }
 
   /**
@@ -83,14 +94,14 @@ class Server {
     return this;
   }
 
-  _timeout(ms) {
+  async _timeout(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
     * Main function to start the server up
     */
-  run(onConnect=null) {
+  async run(args) {
     this.ipc.serve(function() {
       this.ipc.server.on('*', function(message, packet, socket) {
         if (message == 'connect') { return; }
@@ -98,9 +109,9 @@ class Server {
         if (message == `${this.serverName}.return`) {
           this.return(packet);
         }
-        else if (message == `${this.serverName}.returnError`) {
-          this.returnError(packet);
-        }
+        // else if (message == `${this.serverName}.returnError`) {
+          // this.returnError(packet);
+        // }
         else if (message == `${this.serverName}.send`) {
           this.send(packet);
         }
@@ -111,12 +122,10 @@ class Server {
         * connected nodes in the network.
         */
       this.ipc.server.on(`${this.serverName}.nodeInit`, function(packet, socket) {
-        this.sockets[packet.data] = socket;
+        this.sockets[packet.data.name] = socket;
 
-        // This should be bare minimum return on all API calls
-        packet.bdata = packet.data;  // Make copy of original data
-        packet.data  = true;         // Add our return data
-        this.return(packet);         // Send the packet back to sender
+        packet.data = { status: true };
+        this.return(packet);
       }.bind(this));
 
       /**
@@ -124,10 +133,8 @@ class Server {
         * after initializing.
         */
       this.ipc.server.on(`${this.serverName}.greenLight`, function(packet, socket) {
-        // This should be bare minimum return on all API calls
-        packet.bdata = packet.data;     // Make copy of original data
-        packet.data  = this.greenLight; // Add our return data
-        this.return(packet);            // Send the packet back to sender
+        packet.data = { status: true, result: this.greenLight };
+        this.return(packet);
       }.bind(this));
 
       /**
@@ -141,10 +148,8 @@ class Server {
           packet.data
         );
 
-        // This should be bare minimum return on all API calls
-        packet.bdata = packet.data;  // Make copy of original data
-        packet.data  = true;         // Add our return data
-        this.return(packet);         // Send the packet back to sender
+        packet.data = true;
+        this.return(packet);
       }.bind(this));
 
       /**
@@ -164,6 +169,9 @@ class Server {
         // no return required here
       }.bind(this));
 
+
+      if ('onInit' in args) { (args.onInit.bind(this))(); }
+
       /**
         * Add in all custom API calls
         */
@@ -176,7 +184,7 @@ class Server {
         * Here is the main loop function for this server.  It uses the
         * onConnect callback if it exists.
         */
-      if (onConnect != null) { (onConnect.bind(this))(); }
+      if ('onConnect' in args) { (args.onConnect.bind(this))(); }
     }.bind(this));
 
     this.ipc.server.start();
@@ -192,8 +200,7 @@ function main() {
 
   myServer
     .addApiCall('helloWorld', function(packet) {
-      packet.bdata = packet.data;
-      packet.data  = 'Hello World! ' + packet.data ;
+      packet.data = 'Hello World! ' + packet.data ;
       this.return(packet);
     })
 
@@ -213,6 +220,6 @@ function main() {
     });
 }
 
-main();  // uncomment to use example code
+// main();  // uncomment to use example code
 
 module.exports = { Server };
