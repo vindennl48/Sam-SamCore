@@ -204,7 +204,7 @@ function main() {
       this.return(packet);
     })
 
-    .run(async function() {
+    .run({onConnect: async function() {
 
       // Use to boot up all other nodes
       // const exec = require('child_process').exec;
@@ -217,7 +217,7 @@ function main() {
       // placeholder to start up the other nodes
       // await this._timeout(10000);
       this.greenLight = true; // This is required to allow other nodes to start
-    });
+    }});
 }
 
 // main();  // uncomment to use example code

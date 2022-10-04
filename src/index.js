@@ -105,15 +105,6 @@ SamCore
     }
 
     this.returnError(packet, 'Username is not set!');
-    return;
-
-    // if ('username' in db.get()) {
-    //   packet.data = db.get('username');
-    // } else {
-    //   packet.data = 0;
-    // }
-
-    // this.return(packet);
   })
 
   /**

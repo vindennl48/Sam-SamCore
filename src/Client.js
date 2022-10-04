@@ -1,5 +1,6 @@
 const { IPCModule } = require('node-ipc');
 const { Helpers }   = require('./Helpers.js');
+const _p            = Helpers._promise;
 
 class Client {
   /**
@@ -36,10 +37,10 @@ class Client {
     * @param {all} data
     *   Can be any data type. This is the data required by the api call
     */
-  async callApi(receiver, apiCall, data={}) {
+  async callApi(receiver, apiCall, data={}, timelimit=(10*1000)) {
     if (typeof data !== 'object') { data = {}; }
 
-    let promise = await new Promise(function(resolve, reject) {
+    return await _p(function(resolve, reject) {
       /**
         * The returnCode is to force a unique callback for each api call.  This
         * allows us to prevent mixing receiving data up with other calls being
@@ -71,10 +72,7 @@ class Client {
         packet
       );
 
-    }.bind(this));
-
-    // This returns a packet
-    return promise;
+    }.bind(this), timelimit);
   }
 
   /**
@@ -201,7 +199,7 @@ class Client {
   }
 
   async _connect() {
-    let promise = await new Promise(function(resolve, reject) {
+    return await _p(function(resolve, reject) {
       /**
         * This establishes the connection between this node and the Server,
         * SamCore. Documentation can be found in the node-ipc github repo.
@@ -218,9 +216,7 @@ class Client {
           resolve();
         }.bind(this));
       }.bind(this));
-    }.bind(this));
-
-    return promise;
+    }.bind(this), (10*1000));
   }
 
   async _networkOperational() {
@@ -253,7 +249,7 @@ class Client {
 function main() {
   let nodeName   = 'testclient';
   let serverName = 'testserver';
-  let myNode     = new Client(nodeName, serverName/*, false*/);
+  let myNode     = new Client(nodeName, serverName, false);
 
   myNode
     .addApiCall('helloMe', function(packet) {
@@ -262,9 +258,7 @@ function main() {
     })
 
     .run({onConnect: async function() {
-      let packet = await this.callApi(nodeName, 'helloMe', 'All of this with');
-
-      Helpers.log({leader: 'arrow', loud: true}, 'packet: ', packet.data);
+      Helpers.log({leader: 'arrow', loud: false}, 'Start');
     }});
 }
 

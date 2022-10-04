@@ -1,6 +1,34 @@
 
 let Helpers = {
   /**
+    * This function helps us with creating promises that will decay after a
+    * designated period of time.  This will prevent other nodes from freezing if
+    * something crashes in the network.
+    *
+    * @param {function} call
+    *   Function to call during promise
+    * @param {integer} timelimit
+    *   How long in MS to wait until we call an error
+    */
+  async _promise(call, timelimit=0) {
+    let timer;
+    let race = [(async () => { return await new Promise(call); })()];
+
+    if (timelimit !== 0) {
+      race.push(
+        (async () => {
+          await new Promise((resolve, reject) => {
+            timer = setTimeout(resolve, timelimit);
+          })
+          return { data: { status: false, errorMessage: 'API Timeout!' } };
+        })()
+      );
+    }
+
+    return await Promise.race(race).finally(() => clearTimeout(timer));
+  },
+
+  /**
    * A high powered logging function capable of being shut off and
    * manipulated very easily within the SAM network.
    * 
