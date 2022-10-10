@@ -1,8 +1,12 @@
 const { EditJsonFile } = require('./EditJsonFile.js');
 const { Server }       = require('./Server.js');
 const { Helpers }      = require('./Helpers.js');
+const fork             = require('child_process').fork;
+const exec             = require('child_process').exec;
+const spawn            = require('child_process').spawn;
 
 let serverName = 'samcore';
+let nodes      = {};  // List of child fork nodes
 
 /**
  * SamCore will be doing all of the editing and manipulation
@@ -172,55 +176,6 @@ SamCore
   })
 
   /**
-    * Get the filepath of the DAW working directory
-    *
-    * packet.data = {
-    *   name: 'name of daw'
-    * }
-    */
-  .addApiCall('getDawHomeDir', function(packet) {
-    if ( !('name' in packet.data) ) {
-      this.returnError(packet, 'name argument not included!');
-      return;
-    }
-
-    if ('daw' in db.get() &&
-        packet.data.name in db.get('daw') &&
-        'path' in db.get(['daw', packet.data.name])) {
-      packet.data = {
-        result: db.get(['daw', packet.data.name, 'path'])
-      }
-      this.return(packet);
-      return;
-    }
-
-    this.returnError(packet, 'DAW does not have a home directory!');
-  })
-
-  /**
-    * Set the filepath of the DAW working directory
-    *
-    * packet.data = {
-    *   name: 'name of daw',
-    *   path: 'filepath of daw working directory',
-    * }
-    */
-  .addApiCall('setDawHomeDir', function(packet) {
-    if ( !('name' in packet.data) ) {
-      this.returnError(packet, 'name argument not included!');
-      return;
-    }
-    if ( !('path' in packet.data) ) {
-      this.returnError(packet, 'path argument not included!');
-      return;
-    }
-
-    db.set(['daw', packet.data.name, 'path'], packet.data.path);
-
-    this.return(packet);
-  })
-
-  /**
     * Get working directory of a daw
     *
     * packet.data = {
@@ -257,9 +212,32 @@ SamCore
     onConnect: onConnect
   });
 
-async function onInit() {
- this.greenLight = true; 
-}
+async function onInit() {}
 
-async function onConnect() {}
+async function onConnect() {
+
+  // Need to start up all of the other nodes as well
+  let packages = db.get('packages');
+
+  Object.keys(packages).forEach(name => {
+    if (packages[name].enabled && packages[name].persistent && name !== serverName) {
+      // spawn process
+      nodes[name] = spawn('node', [`./${name}/.`])
+
+      nodes[name].stdout.on('data', function (data) {  
+        Helpers.log({loud: true}, `${name}: ${data}`);
+      });  
+      nodes[name].stderr.on('data', function (data) {  
+        Helpers.log({loud: true}, `${name} Error: ${data}`);
+      });  
+      nodes[name].on('close', function (code) {  
+        Helpers.log({loud: true}, `${name} Closed: ${code}`);
+      });
+
+      Helpers.log({leader: 'highlight', loud: true, spaceBottom: true}, `Started "${name}"`);
+    }
+  });
+
+  this.greenLight = true; // This allows the other nodes to start running
+}
 
