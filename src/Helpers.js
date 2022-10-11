@@ -1,3 +1,7 @@
+const fs   = require('fs');
+const fse  = require('fs-extra');
+const exec = require('child_process').exec;
+const path = require('path');
 
 let Helpers = {
   /**
@@ -144,6 +148,210 @@ let Helpers = {
       settings:    ('settings'    in args) ? args.settings    : {}
     };
   }
+}
+
+Helpers.Files = {
+  /**
+  * merge bash commands together with spaces
+  */
+  _argsJoin(...args) {
+    let result = "";
+
+    args.forEach(arg => {
+      result = `${result} ${arg}`;
+    });
+
+    return result;
+  },
+
+  /**
+  * run a bash command
+  */
+  async _run(...args) {
+    let command = this._argsJoin(...args);
+
+    return await Helpers._promise(function(resolve, reject) {
+      let process = exec(command, (err, stdout, stderr) => {
+        resolve(stdout);
+      });
+    });
+  },
+
+  /**
+  * Just a wrapper for path.join but all inclusive in this Files object.
+  *
+  * If the first argument is 'cwd', it will use the current working directory
+  */
+  join(...args) {
+    if (args[0] === 'cwd') {
+      args[0] = process.cwd();
+    }
+    return path.join(args);
+  },
+
+  /**
+  * For easily quoting text, especially for running bash commands
+  */
+  q(text) {
+    return `'${text}'`
+  },
+
+  /**
+  * For replacing in text easily.  add a #1 #2 etc. and replace with args
+  *
+  * r('Hi my #1 is #2 and my #1 is stupid', 'name', 'mitch')
+  * result: 'Hi my name is mitch and my name is stupid'
+  */
+  r(text, ...args) {
+    args.forEach((value, i) => {
+      text = text.replace(`#${i+1}`, value);
+    });
+    return text;
+  },
+
+  /**
+  * Checks if file or folder exists
+  */
+  exists(path) {
+    if ( fs.existsSync(path) ) {
+      return true;
+    }
+    return false;
+  },
+
+  /**
+  * Create a folder.  This creates entire folder path if it doesnt exist
+  */
+  mkdir(path) {
+    fs.mkdirSync(path, { recursive: true });
+  },
+
+  /**
+  * Copy a file or folder to a new location
+  */
+  copy(src, dest) {
+    fse.copySync(src, dest);
+  },
+
+  /**
+  * ASYNC
+  *
+  * Compress a directory into a tarball
+  */
+  async compress(src, dest) {
+    await this._run(
+      this.r('tar -zcvf #1 #2', this.q(dest), this.q(src))
+    );
+  },
+
+  /**
+  * ASYNC
+  *
+  * Extract a tarball into a directory
+  */
+  async extract(src, dest) {
+    await this.mkdir(dest);
+
+    await this._run(
+      this.r('tar -zxvf #1 -C #2 #3', this.q(src), this.q(dest), '--strip-components=1')
+    )
+  },
+
+  /**
+  * ASYNC
+  *
+  * This is how we will compare if a song has changed at all. First check is to
+  * match the directory tree.  This function gets the directory tree to save in
+  * the local filesdb.json.
+  */
+  async getDirMap(path) {
+    return await this._run(
+      this.r('tree #1', this.q(path))
+    );
+  },
+
+  /**
+  * This is to easily compare two files to eachother
+  */
+  compareFiles(file1, file2) {
+    try {
+      file1 = fs.readFileSync(file1);
+      file2 = fs.readFileSync(file2);
+      if (file1.equals(file2)) return true;
+    }
+    catch (e) {
+      return false;
+    }
+
+    return false;
+  }
+}
+
+/**
+  * This is simply to force the packet standards.  Use upgrade() to convert a
+  * basic packet received from IPC into a complex packet.  Once upgraded, we
+  * can use all of the fancy functions listed below.  When we are ready to send
+  * off again, we must downgrade the packet.  To check if simple or complex, use
+  * the isSimple() function.
+  */
+Helpers.Packet = {
+  new(args={}) {
+    let returnCode = Date.now();
+    if (args.returnCode === false) { returnCode = 0; }
+
+    let packet = {
+      sender:     args.sender   || '',
+      receiver:   args.receiver || '',
+      apiCall:    args.apiCall  || '',
+      returnCode: returnCode,
+      args:       args.args     || {},
+      data:       { status: true, result: 0, errorMessage: 'No Errors' } 
+    };
+
+    return this.upgrade(packet);
+  },
+
+  upgrade(packet) {
+    return {
+      obj: packet,
+
+      get sender()     { return obj.sender      || '';   },
+      get receiver()   { return obj.receiver    || '';   },
+      get apiCall()    { return obj.apiCall     || '';   },
+      get returnCode() { return obj.returnCode  || 0;    },
+      get args()       { return obj.args        || {};   },
+
+      get status()     { return obj.data.status || true; },
+      get result()     { return obj.data.result || 0;    },
+
+      get errorMessage() { return obj.data.errorMessage || 'No Errors'; },
+
+      set sender(x)       { obj.sender             = x; },
+      set receiver(x)     { obj.receiver           = x; },
+      set apiCall(x)      { obj.apiCall            = x; },
+      removeReturnCode()  { obj.returnCode = undefined; },
+      set args(x)         { obj.args               = x; },
+
+      set status(x)       { obj.data.status        = x; },
+      set result(x)       { obj.data.result        = x; },
+
+      set errorMessage(x) { obj.data.errorMessage  = x; },
+
+      error(message) {
+        this.status       = false;
+        this.errorMessage = message;
+      }
+    }
+  },
+
+  downgrade(packet) { return packet.obj; },
+
+  isSimple(packet) {
+    if (packet.obj === undefined) {
+      return true;
+    }
+    return false;
+  },
 }
 
 module.exports = { Helpers };
