@@ -29,6 +29,10 @@ class EditJsonFile {
       path = path.join('.');
     }
 
+    if ( !fs.existsSync(path) ) {
+      fs.writeFileSync(path, options.defaultContents || {});
+    }
+
     this.options            = options = options || {}
     options.stringify_width = options.stringify_width || 2
     options.stringify_fn    = options.stringify_fn || null
