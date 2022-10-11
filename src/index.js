@@ -1,8 +1,7 @@
 const { EditJsonFile } = require('./EditJsonFile.js');
 const { Server }       = require('./Server.js');
 const { Helpers }      = require('./Helpers.js');
-const fork             = require('child_process').fork;
-const exec             = require('child_process').exec;
+const Files            = Helpers.Files;
 const spawn            = require('child_process').spawn;
 
 let serverName = 'samcore';
@@ -15,17 +14,15 @@ let nodes      = {};  // List of child fork nodes
  *
  * Also, if the file doesnt exist, lets create one
  */
-const runDirectory    = process.cwd();
-const SamCoreSettings = 'SamCoreSettings.json';
-const filePath        = `${runDirectory}/${SamCoreSettings}`
-let   db              = new EditJsonFile(filePath, {autosave: true});
-if ( !Object.keys(db.get()).length ) {
+const filePath = Files.join('cwd', 'SamCoreSettings.json');
+let db = new EditJsonFile(filePath, { autosave: true });
+if ( db.get(['packages', servername]) === undefined ) {
   db.set(['packages', serverName], Helpers.defaultPackage({
     version:    '1.0.0', // try and pull this from package file
     installed:  true,
     persistent: true,
     mandatory:  true,
-    link:       "https: //github.com/vindennl48/Sam-SamCore"
+    link:       "https://github.com/vindennl48/Sam-SamCore"
   }));
 } 
 
@@ -40,7 +37,7 @@ if (settings === 'undefined') {
 }
 
 // Create server and run
-let SamCore    = new Server(serverName);
+let SamCore = new Server(serverName);
 
 SamCore
   /**
@@ -136,11 +133,11 @@ SamCore
     * packet.data = {}
     */
   .addApiCall('getSettings', function(packet) {
-    if ('packages' in db.get() &&
-        packet.sender in db.get('packages') &&
-        'settings' in db.get(['packages', packet.sender])) {
+    let settings = db.get(['packages', packet.sender, 'settings']);
+
+    if (settings !== undefined) {
       packet.data = {
-        result: db.get(['packages', packet.sender, 'settings'])
+        result: settings
       }
       this.return(packet);
       return;
@@ -162,7 +159,7 @@ SamCore
       return;
     }
 
-    if ('packages' in db.get() && packet.sender in db.get('packages')) {
+    if ( db.get(['packages', packet.sender]) !== undefined ) {
       db.set(['packages', packet.sender, 'settings'], packet.data.settings);
     } else {
       this.returnError(
