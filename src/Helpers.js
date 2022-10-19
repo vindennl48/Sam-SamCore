@@ -186,7 +186,7 @@ Helpers.Files = {
     if (args[0] === 'cwd') {
       args[0] = process.cwd();
     }
-    return path.join(args);
+    return path.join(...args);
   },
 
   /**
@@ -220,6 +220,18 @@ Helpers.Files = {
   },
 
   /**
+  * Remove file or folder.  WARNING: Can not be reversed!
+  */
+  remove(path) {
+    if ( fs.statSync(path).isDirectory() ) {
+      fs.rmSync(path, { recursive: true, force: true });
+      return;
+    }
+
+    fs.unlinkSync(path);
+  },
+
+  /**
   * Create a folder.  This creates entire folder path if it doesnt exist
   */
   mkdir(path) {
@@ -239,8 +251,8 @@ Helpers.Files = {
   * Compress a directory into a tarball
   */
   async compress(src, dest) {
-    await this._run(
-      this.r('tar -zcvf #1 #2', this.q(dest), this.q(src))
+    return await this._run(
+      this.r('tar -C #2 -zcvf #1 .', this.q(dest), this.q(src))
     );
   },
 
@@ -297,61 +309,65 @@ Helpers.Files = {
 Helpers.Packet = {
   new(args={}) {
     let returnCode = Date.now();
-    if (args.returnCode === false) { returnCode = 0; }
+    if (args.returnCode === false) { returnCode = null; }
 
-    let packet = {
-      sender:     args.sender   || '',
-      receiver:   args.receiver || '',
-      apiCall:    args.apiCall  || '',
-      returnCode: returnCode,
-      args:       args.args     || {},
-      data:       { status: true, result: 0, errorMessage: 'No Errors' } 
-    };
+    // let packet = {
+    //   sender:     args.sender   || '',
+    //   receiver:   args.receiver || '',
+    //   apiCall:    args.apiCall  || '',
+    //   returnCode: returnCode,
+    //   args:       args.args     || {},
+    //   data:       { status: true, result: 0, errorMessage: false } 
+    // };
 
-    return this.upgrade(packet);
-  },
-
-  upgrade(packet) {
     return {
-      obj: packet,
+      sender:       args.sender       || '',
+      receiver:     args.receiver     || '',
+      apiCall:      args.apiCall      || '',
+      returnCode:   returnCode,
+      args:         args.args         || {},
+      status:       args.status       || true,
+      result:       args.result       || 0,
+      errorMessage: args.errorMessage || false
+    };
+  },
 
-      get sender()     { return obj.sender      || '';   },
-      get receiver()   { return obj.receiver    || '';   },
-      get apiCall()    { return obj.apiCall     || '';   },
-      get returnCode() { return obj.returnCode  || 0;    },
-      get args()       { return obj.args        || {};   },
+  /**
+  * A simple return for libraries inside nodes to be able to return to a packet
+  * easily.
+  *
+  * Default is:
+  *   {
+  *     status: true,
+  *     result: null
+  *   }
+  */
+  newMini(args={}) {
+    return {
+      status: args.status || true,
+      result: args.result || null
+    };
+  },
 
-      get status()     { return obj.data.status || true; },
-      get result()     { return obj.data.result || 0;    },
+  /**
+  * An easy way to merge packets and miniPackets.
+  */
+  mergeMini(packet, mini) {
+    packet.status = mini.status;
+    packet.result = mini.result;
+    return packet;
+  },
 
-      get errorMessage() { return obj.data.errorMessage || 'No Errors'; },
-
-      set sender(x)       { obj.sender             = x; },
-      set receiver(x)     { obj.receiver           = x; },
-      set apiCall(x)      { obj.apiCall            = x; },
-      removeReturnCode()  { obj.returnCode = undefined; },
-      set args(x)         { obj.args               = x; },
-
-      set status(x)       { obj.data.status        = x; },
-      set result(x)       { obj.data.result        = x; },
-
-      set errorMessage(x) { obj.data.errorMessage  = x; },
-
-      error(message) {
-        this.status       = false;
-        this.errorMessage = message;
+  checkArgs(parent, argsNames, packet) {
+    argsNames.forEach(argName => {
+      if ( !(argName in packet.args) ) {
+        parent.returnError(packet, `${argName} argument not included in packet!`);
+        return false;
       }
-    }
-  },
+    });
 
-  downgrade(packet) { return packet.obj; },
-
-  isSimple(packet) {
-    if (packet.obj === undefined) {
-      return true;
-    }
-    return false;
-  },
+    return true;
+  }
 }
 
 module.exports = { Helpers };

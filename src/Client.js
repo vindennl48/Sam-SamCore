@@ -1,5 +1,6 @@
 const { IPCModule } = require('node-ipc');
 const { Helpers }   = require('./Helpers.js');
+const Packet        = Helpers.Packet;
 const _p            = Helpers._promise;
 
 class Client {
@@ -34,11 +35,13 @@ class Client {
     *   The node in which you are calling the api call from
     * @param {string} apiCall
     *   The name of the api call to call
-    * @param {all} data
-    *   Can be any data type. This is the data required by the api call
+    * @param {all} args
+    *   Can be any data type. These are the args required by the api call
+    * @param {integer} timelimit
+    *   The amount of ms to wait before disconnecting or timing out
     */
-  async callApi(receiver, apiCall, data={}, timelimit=(10*1000)) {
-    if (typeof data !== 'object') { data = {}; }
+  async callApi(receiver, apiCall, args={}, timelimit=(10*1000)) {
+    if (typeof args !== 'object') { args = {}; }
 
     return await _p(function(resolve, reject) {
       /**
@@ -46,24 +49,32 @@ class Client {
         * allows us to prevent mixing receiving data up with other calls being
         * made at the same time.
         */
-      let returnCode = Date.now();
+      // let returnCode = Date.now();
+
+      let packet = Packet.new({
+        sender:       this.nodeName,
+        receiver:     receiver,
+        apiCall:      apiCall,
+        // returnCode:   returnCode,
+        args:         args
+      });
 
       // Creates the ipc listener for the return data
       this.ipc.of[this.serverName].on(
-        `${receiver}.${apiCall}.return.${this.nodeName}.${returnCode}`,
+        `${receiver}.${apiCall}.return.${this.nodeName}.${packet.returnCode}`,
         resolve,
         true // setting this true will remove this listener once used
       );
 
-      // Generates the packet needed to send thru the server
-      let packet = {
-        sender:       this.nodeName,
-        receiver:     receiver,
-        apiCall:      apiCall,
-        returnCode:   returnCode,
-        bdata:        data, // used as backup for debugging
-        data:         data
-      };
+      // // Generates the packet needed to send thru the server
+      // let packet = {
+      //   sender:       this.nodeName,
+      //   receiver:     receiver,
+      //   apiCall:      apiCall,
+      //   returnCode:   returnCode,
+      //   bdata:        data, // used as backup for debugging
+      //   data:         data
+      // };
 
       // Sends out the api call
       this.ipc.of[this.serverName].emit(
@@ -117,9 +128,10 @@ class Client {
     *  packet received for API call
     */
   return(packet) {
-    if ( !('status' in packet.data) ) {
-      packet.data.status = true;
-    }
+    // Should always be true unless there was an error
+    // if ( !('status' in packet.data) ) {
+    //   packet.data.status = true;
+    // }
     this.ipc.of[this.serverName].emit(`${this.serverName}.return`, packet);
   }
 
@@ -133,13 +145,20 @@ class Client {
     *   Message being sent back to caller of api call
     */
   returnError(packet, errorMessage='Default Error Message') {
-    if ( !('status' in packet.data) ) {
-      packet.data.status = false;
+    // Should always need to switch status to false
+    // if ( !('status' in packet.data) ) {
+    //   packet.data.status = false;
+    // }
+    packet.status = false;
+
+    // If an error message doesnt exist yet, set the message
+    if (packet.errorMessage === false) {
+      packet.errorMessage = errorMessage;
     }
 
-    if ( !('errorMessage' in packet.data) ) {
-      packet.data.errorMessage = errorMessage;
-    }
+    // if ( !('errorMessage' in packet.data) ) {
+    //   packet.data.errorMessage = errorMessage;
+    // }
 
     this.return(packet);
   }
@@ -174,7 +193,7 @@ class Client {
       * to be able to debug connection issues.
       */
     this.ipc.of[this.serverName].on(`${this.nodeName}.message`, function(packet) {
-      Helpers.log({leader: 'arrow', loud: true}, `Message from '${packet.sender}':`, packet.data);
+      Helpers.log({leader: 'arrow', loud: true}, `Message from '${packet.sender}':`, packet.args.message);
     }.bind(this));
 
     /**
@@ -224,7 +243,8 @@ class Client {
 
     while (!answer) {
       let packet = await this.callApi(this.serverName, 'greenLight');
-      if (packet.data.result === true) {
+      // if (packet.data.result === true) {
+      if (packet.result === true) {
         answer = true;
         // Helpers.log({leader: 'highlight', loud: false}, 'GO!');
       } else {
@@ -253,7 +273,8 @@ function main() {
 
   myNode
     .addApiCall('helloMe', function(packet) {
-      packet.data = packet.data + ' ME!';
+      // packet.data = packet.data + ' ME!';
+      packet.result = `${packet.args.message}, ME!`;
       this.return(packet);
     })
 

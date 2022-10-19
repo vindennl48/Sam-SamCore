@@ -37,9 +37,10 @@ class Server {
     *  packet received from node
     */
   return(packet) {
-    if ( !('status' in packet.data) ) {
-      packet.data.status = true;
-    }
+    // Should always be true unless there was an error
+    // if ( !('status' in packet.data) ) {
+    //   packet.data.status = true;
+    // }
 
     // receiver.apiCall.return.sender.returnCode
     let returnCall = `${packet.receiver}.${packet.apiCall}.return.${packet.sender}`;
@@ -54,13 +55,20 @@ class Server {
     * This function is obsolete.
     */
   returnError(packet, errorMessage='Default Error Message') {
-    if ( !('status' in packet.data) ) {
-      packet.data.status = false;
+    // Should always need to switch status to false
+    // if ( !('status' in packet.data) ) {
+    //   packet.data.status = false;
+    // }
+    packet.status = false;
+
+    // If an error message doesnt exist yet, set the message
+    if (packet.errorMessage === false) {
+      packet.errorMessage = errorMessage;
     }
 
-    if ( !('errorMessage' in packet.data) ) {
-      packet.data.errorMessage = errorMessage;
-    }
+    // if ( !('errorMessage' in packet.data) ) {
+    //   packet.data.errorMessage = errorMessage;
+    // }
 
     this.return(packet);
   }
@@ -122,9 +130,10 @@ class Server {
         * connected nodes in the network.
         */
       this.ipc.server.on(`${this.serverName}.nodeInit`, function(packet, socket) {
-        this.sockets[packet.data.name] = socket;
+        // this.sockets[packet.data.name] = socket;
+        this.sockets[packet.args.name] = socket;
 
-        packet.data = { status: true };
+        // packet.data = { status: true };
         this.return(packet);
       }.bind(this));
 
@@ -133,7 +142,8 @@ class Server {
         * after initializing.
         */
       this.ipc.server.on(`${this.serverName}.greenLight`, function(packet, socket) {
-        packet.data = { status: true, result: this.greenLight };
+        // packet.data = { status: true, result: this.greenLight };
+        packet.result = this.greenLight;
         this.return(packet);
       }.bind(this));
 
@@ -145,11 +155,11 @@ class Server {
         Helpers.log(
           {leader: 'arrow', loud: true},
           `Message from '${packet.sender}':`,
-          packet.data
+          packet.args.message
         );
 
-        packet.data = true;
-        this.return(packet);
+        // packet.data = true;
+        // this.return(packet);
       }.bind(this));
 
       /**
@@ -200,7 +210,8 @@ function main() {
 
   myServer
     .addApiCall('helloWorld', function(packet) {
-      packet.data = 'Hello World! ' + packet.data ;
+      // packet.data = 'Hello World! ' + packet.data ;
+      packet.result = `Hello World! ${packet.args.message}`
       this.return(packet);
     })
 
